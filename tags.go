@@ -1,7 +1,6 @@
 package retag
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 	"unsafe"
@@ -83,59 +82,50 @@ func isExported(name string) bool {
 	return !('a' <= b && b <= 'z') && b != '_'
 }
 
+func getElemType(t reflect.Type) reflect.Type {
+	for {
+		if t.Kind() == reflect.Ptr {
+			t = t.Elem()
+		} else {
+			return t
+		}
+	}
+}
+
 func GetFieldTags(s interface{}) FieldTag {
-	ptrVal := reflect.ValueOf(s)
+	t := reflect.TypeOf(s)
 
-	return getTag(ptrVal.Type().Elem())
+	t = getElemType(t)
 
+	return getTag(t)
+
+}
+
+func addFieldTag(a FieldTag, b FieldTag, prefix string) FieldTag {
+	res := a
+	for f, t := range b {
+		res[FieldName(prefix+string(f))] = t
+	}
+
+	return res
 }
 
 func getTag(t reflect.Type) FieldTag {
-	if t.NumField() == 0 {
-		return nil
-	}
-
 	fts := make(FieldTag)
 
-	for i := 0; i < t.NumField(); i++ {
-		subfts := getStructTag(t.Field(i))
-		for f, t := range subfts {
-			fts[f] = t
-		}
-	}
-
-	return fts
-}
-
-func getStructTag(f reflect.StructField) FieldTag {
-	fts := make(FieldTag)
-
-	fmt.Println(f.Type.Kind())
-
-	switch getType(f.Type, nil).Kind() {
+	switch t.Kind() {
 	case reflect.Struct:
-		fts[FieldName(f.Name)] = f.Tag
-		for i := 0; i < f.Type.Elem().NumField(); i++ {
-			subfts := getStructTag(f.Type.Elem().Field(i))
-			for subf, subt := range subfts {
-				fts[FieldName(f.Name+"."+string(subf))] = subt
-			}
+		for i := 0; i < t.NumField(); i++ {
+			fts[FieldName(t.Field(i).Name)] = t.Field(i).Tag
+			subfts := getTag(getElemType(t.Field(i).Type))
+			fts = addFieldTag(fts, subfts, t.Field(i).Name+".")
 		}
-	case reflect.Map, reflect.Slice, reflect.Array:
-		fts[FieldName(f.Name)] = f.Tag
-		fmt.Println("&&&", reflect.MapOf(f.Type.Key(), f.Type.Elem()), getType(f.Type.Elem(), nil).Kind())
-		if getType(f.Type, nil).Kind() == reflect.Struct {
-
-			for i := 0; i < f.Type.Elem().NumField(); i++ {
-				subfts := getStructTag(f.Type.Elem().Field(i))
-				for subf, subt := range subfts {
-					fts[FieldName(f.Name+"."+string(subf))] = subt
-				}
-			}
-		}
-	//case reflect.Slice:
+	case reflect.Array, reflect.Slice, reflect.Map:
+		subfts := getTag(getElemType(t.Elem()))
+		fts = addFieldTag(fts, subfts, "")
 	default:
-		fts[FieldName(f.Name)] = f.Tag
+		//fmt.Println(t.String())
 	}
+
 	return fts
 }

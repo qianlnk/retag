@@ -9,7 +9,7 @@ import (
 type User struct {
 	ID    string
 	Name  string
-	Class []Class
+	Class map[string]*Class
 	Age   int
 }
 
@@ -22,13 +22,13 @@ type Class struct {
 type ClassTag struct {
 	ClassID   string         `json:"class_id" xml:"class_id"`
 	ClassName string         `json:"class_name" xml:"class_name"`
-	Scores    map[string]int `json:"scores"`
+	Scores    map[string]int `json:"_scores"`
 }
 
 type UserTag struct {
 	ID    string               `json:"_id" xml:"_id"`
 	Name  string               `json:"_name" xml:"_name"`
-	Class map[string]*ClassTag `json:"class"`
+	Class map[string]*ClassTag `json:"_class"`
 	Age   int                  `json:"_age"`
 }
 
@@ -43,9 +43,9 @@ func TestRetag(t *testing.T) {
 	u := User{
 		"001",
 		"qianlnk",
-		[]Class{
-			{"01", "math", map[string]int{"math": 100}},
-			{"02", "english", map[string]int{"english": 100}},
+		map[string]*Class{
+			"math":    {"01", "math", map[string]int{"math": 100}},
+			"english": {"02", "english", map[string]int{"english": 100}},
 		},
 		18,
 	}
