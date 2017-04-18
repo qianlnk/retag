@@ -6,51 +6,164 @@ import (
 	"testing"
 )
 
-type User struct {
-	ID    string
-	Name  string
-	Class map[string]*Class
-	Age   int
+type StdType struct {
+	Int     int
+	Int8    int8
+	Int16   int16
+	Int32   int32
+	Int64   int64
+	Uint    uint
+	Uint8   uint8
+	Uint16  uint16
+	Uint32  uint32
+	Uint64  uint64
+	Float32 float32
+	Float64 float64
+	String  string
+	Bool    bool
+	Byte    byte
+	//Complex64  complex64
+	//Complex128 complex128
+	Interface interface{}
 }
 
-type Class struct {
-	ClassID   string
-	ClassName string
-	Scores    map[string]int
+type StdTypeTag struct {
+	Int     int     `json:"_int"`
+	Int8    int8    `json:"_int8"`
+	Int16   int16   `json:"_int16"`
+	Int32   int32   `json:"_int32"`
+	Int64   int64   `json:"_int64"`
+	Uint    uint    `json:"_uint"`
+	Uint8   uint8   `json:"_uint8"`
+	Uint16  uint16  `json:"_uint16"`
+	Uint32  uint32  `json:"_uint32"`
+	Uint64  uint64  `json:"_uint64"`
+	Float32 float32 `json:"_float32"`
+	Float64 float64 `json:"_float64"`
+	String  string  `json:"_string"`
+	Bool    bool    `json:"_bool"`
+	Byte    byte    `json:"_byte"`
+	//Complex64  complex64  `json:"_complex64"`
+	//Complex128 complex128 `json:"_complex128"`
+	Interface interface{} `json:"_interface"`
 }
 
-type ClassTag struct {
-	ClassID   string         `json:"class_id" xml:"class_id"`
-	ClassName string         `json:"class_name" xml:"class_name"`
-	Scores    map[string]int `json:"_scores"`
+type StdPtrType struct {
+	Int       *int
+	Uint      *uint
+	Float32   *float32
+	String    *string
+	Bool      *bool
+	Byte      *byte
+	Complex64 *complex64
+	Interface *interface{}
 }
 
-type UserTag struct {
-	ID    string               `json:"_id" xml:"_id"`
-	Name  string               `json:"_name" xml:"_name"`
-	Class map[string]*ClassTag `json:"_class"`
-	Age   int                  `json:"_age"`
+type StdPtrTypeTag struct {
+	Int       *int         `json:"ptr_int"`
+	Uint      *uint        `json:"ptr_uint"`
+	Float32   *float32     `json:"ptr_float32"`
+	String    *string      `json:"ptr_string"`
+	Bool      *bool        `json:"ptr_bool"`
+	Byte      *byte        `json:"ptr_byte"`
+	Complex64 *complex64   `json:"ptr_complex64"`
+	Interface *interface{} `json:"ptr_interface"`
 }
 
-func TestRetag(t *testing.T) {
-	// fts := FieldTag{
-	// 	"ID":   `json:"_id"`,
-	// 	"Name": `json:"name"`,
-	// }
+type Recursion struct {
+	Std      StdType
+	PtrStd   *StdType
+	ArrayStd [3]StdType
+	SliceStd []StdType
+	MapStd   map[string]StdType
+}
 
-	fts := GetFieldTags(&UserTag{})
+type RecursionTag struct {
+	Std      StdTypeTag            `json:"std"`
+	PtrStd   *StdTypeTag           `json:"ptr_std"`
+	ArrayStd [3]StdTypeTag         `json:"array_std"`
+	SliceStd []StdTypeTag          `json:"slice_std"`
+	MapStd   map[string]StdTypeTag `json:"map_std"`
+}
+
+var std = &StdType{
+	Int:     1,
+	Int8:    2,
+	Int16:   3,
+	Int32:   4,
+	Int64:   5,
+	Uint:    6,
+	Uint8:   7,
+	Uint16:  8,
+	Uint32:  9,
+	Uint64:  10,
+	Float32: 11.1,
+	Float64: 12.2,
+	String:  "13",
+	Bool:    true,
+	Byte:    'a',
+	//Complex64:  14.4 + 14i,
+	//Complex128: 15.5 + 15i,
+	Interface: "test",
+}
+
+func TestStdType(t *testing.T) {
+	fts := GetFieldTags(&StdTypeTag{})
 	fmt.Println(fts)
-	u := User{
-		"001",
-		"qianlnk",
-		map[string]*Class{
-			"math":    {"01", "math", map[string]int{"math": 100}},
-			"english": {"02", "english", map[string]int{"english": 100}},
-		},
-		18,
-	}
-	nu := Retag(&u, fts)
+	stdTag := Retag(std, fts)
+	fmt.Println(stdTag)
+	data, err := json.MarshalIndent(stdTag, "", "    ")
+	fmt.Println(string(data), err)
+}
 
-	data, err := json.Marshal(nu)
+func TestStdPtrType(t *testing.T) {
+	var i = 1
+	ptrStd := &StdPtrType{
+		Int: &i,
+	}
+
+	fts := GetFieldTags(&StdPtrTypeTag{})
+	stdPtrTag := Retag(ptrStd, fts)
+	data, err := json.MarshalIndent(stdPtrTag, "", "    ")
+	fmt.Println(string(data), err)
+}
+
+func TestRecursion(t *testing.T) {
+	rec := &Recursion{
+		Std:      *std,
+		PtrStd:   std,
+		ArrayStd: [3]StdType{*std, StdType{}, StdType{}},
+		SliceStd: []StdType{*std},
+		MapStd: map[string]StdType{
+			"map_std": *std,
+		},
+	}
+
+	fts := GetFieldTags(RecursionTag{})
+	fmt.Println(fts)
+	recTag := Retag(rec, fts)
+	data, err := json.MarshalIndent(recTag, "", "    ")
+	fmt.Println(string(data), err)
+}
+
+func TestCustomFieldTag(t *testing.T) {
+	fts := FieldTag{
+		"Std":      `json:"std"`,
+		"Std.Int":  `json:"_int"`,
+		"Std.Uint": `json:"_uint"`,
+	}
+
+	rec := &Recursion{
+		Std:      *std,
+		PtrStd:   std,
+		ArrayStd: [3]StdType{*std, StdType{}, StdType{}},
+		SliceStd: []StdType{*std},
+		MapStd: map[string]StdType{
+			"map_std": *std,
+		},
+	}
+	fmt.Println(fts)
+	recTag := Retag(rec, fts)
+	data, err := json.MarshalIndent(recTag, "", "    ")
 	fmt.Println(string(data), err)
 }

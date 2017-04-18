@@ -6,9 +6,13 @@ import (
 	"unsafe"
 )
 
+//FieldName struct field name
 type FieldName string
+
+//FieldTag a map of struct field tag
 type FieldTag map[FieldName]reflect.StructTag
 
+//Retag a ptr of the struct to retag, and FieldTag
 func Retag(s interface{}, fts FieldTag) interface{} {
 	ptrVal := reflect.ValueOf(s)
 
@@ -30,7 +34,7 @@ func getType(t reflect.Type, fts FieldTag) reflect.Type {
 		return reflect.SliceOf(getType(t.Elem(), fts))
 	case reflect.Map:
 		return reflect.MapOf(getType(t.Key(), fts), getType(t.Elem(), fts))
-	case reflect.Chan, reflect.Func, reflect.UnsafePointer, reflect.Interface:
+	case reflect.Chan, reflect.Func, reflect.UnsafePointer:
 		panic("Unsupported type: " + t.Kind().String())
 	default:
 		return t
@@ -92,6 +96,7 @@ func getElemType(t reflect.Type) reflect.Type {
 	}
 }
 
+//GetFieldTags get deep struct field tag
 func GetFieldTags(s interface{}) FieldTag {
 	t := reflect.TypeOf(s)
 
